@@ -1,0 +1,108 @@
+---
+- hosts: icinga_servers
+  vars:
+    password: Jffhol&ffn#1lj350jH$.
+    base_dir: "{{ BASE_DIR|default('/root') }}"
+    icinga_conf: '/etc/icinga2/conf.d'
+
+  tasks:
+    - name: Add user sagar in all hosts
+      user: name=sagar shell=/bin/bash comment="User" password={{password}}
+
+    - name: Adding user sagar to sudoers
+      lineinfile: dest=/etc/sudoers
+        backup=yes
+        line='sagar	ALL=(ALL)	ALL'
+        state=present
+
+    - name: Downloading Icinga Repo RPM files
+      get_url: url=https://packages.icinga.com/epel/icinga-rpm-release-7-latest.noarch.rpm dest={{ base_dir }}/icinga-repo.rpm
+
+    - name: Downloading EPEL Repo RPM files
+      get_url: url=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm dest={{ base_dir }}/epel-repo.rpm
+
+    - name: Install Icinga Repo packages
+      yum: name={{ base_dir }}/icinga-repo.rpm state=present
+
+    - name: Install EPEL Repo packages
+      yum: name={{ base_dir }}/epel-repo.rpm state=present
+
+    - name: Install necessary packages from yum Repo
+      yum: name={{ item }} state=latest update_cache=no
+      with_items:
+        - icinga2
+        - nagios-plugins-all
+        - httpd
+        - php
+        - php-mysql
+        - php-mbstring
+        - git
+        - mariadb-server
+        - icinga2-ido-mysql
+        - MySQL-python
+
+    - name: Starting icinga2 service
+      service: name=icinga2 state=started enabled=yes
+
+    - name: Starting Web service
+      service: name=httpd state=started enabled=yes
+
+    - name: Starting mariadb service
+      service: name=mariadb state=started enabled=yes
+
+    - name: delete anonymous MySQL server user for {{ ansible_hostname }}
+      action: mysql_user user="" host="{{ ansible_hostname }}" state="absent"
+
+    - name: delete anonymous MySQL server user for localhost
+      action: mysql_user user="" state="absent"
+
+    - name: remove the MySQL test database
+      action: mysql_db db=test state=absent
+
+    - name: Change root user password on first run
+      mysql_user: login_user=root
+          login_password=''
+          name=root
+          password='sagar'
+          priv=*.*:ALL,GRANT
+          host={{ item }}
+      with_items:
+        - 127.0.0.1
+        - ::1
+        - localhost
+
+    - name: Load Icinga database
+      mysql_db: name=icinga state=import target=/usr/share/icinga2-ido-mysql/schema/mysql.sql login_user=root login_password=sagar
+
+    - name: Enabling Icinga commmand Features
+      icinga2_feature: name=command state=present
+
+    - name: Enabling Icinga mysql Features
+      icinga2_feature: name=ido-mysql state=present
+
+    - name: Starting icinga2 service
+      service: name=icinga2 state=restarted
+
+    - name: Edit timezone as required by icingaweb2 wizard
+      lineinfile: line="date.timezone = Asia/Kolkata" regexp=";date.timezone =.*" dest="/etc/php.ini"
+
+    - name: Restarting HTTPD service
+      service: name=httpd state=restarted
+
+    - name: Move default Web page
+      shell: mv /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/welcome.conf.old
+
+    - name: Copy index file to default Web root
+      copy: src=./Templates/index.html dest=/var/www/html/index.html
+
+    - name: Copy Icinga Featue MySQL file
+      copy: src=./Templates/ido-mysql.conf dest=/etc/icinga2/features-available/ido-mysql.conf
+
+    - name: Disable swap and enable MySql monitoring
+      copy: src=./Templates/services.conf dest=/etc/icinga2/conf.d/services.conf
+
+    - name: Disable swap and enable MySql monitoring
+      copy: src=./Templates/commands.conf dest=/etc/icinga2/conf.d/commands.conf
+
+    - name: Starting icinga2 service
+      service: name=icinga2 state=restarted

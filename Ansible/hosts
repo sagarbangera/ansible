@@ -1,0 +1,4 @@
+[icinga_servers]
+localhost
+[nodes]
+172.31.16.183

@@ -1,0 +1,71 @@
+---
+- hosts: icinga_servers
+  vars:
+    password: Jffhol&ffn#1lj350jH$.
+    base_dir: "{{ BASE_DIR|default('/root') }}"
+    icinga_conf: '/etc/icinga2/conf.d'
+
+  tasks:
+
+    - name: icinga api setup
+      shell: icinga2 api setup
+
+    - name: Starting icinga2 service
+      service: name=icinga2 state=restarted
+
+    - name: Install necessary packages from yum Repo
+      yum: name={{ item }} state=latest update_cache=no
+      with_items:
+        - icingaweb2
+        - icingacli
+
+    - name: Create token for setup
+      shell: icingacli setup token create
+
+    - name: Restarting HTTPD service
+      service: name=httpd state=restarted
+
+    - name: Show token for setup
+      shell: icingacli setup token show
+
+    - name: Copy icingaweb2 MySQL DB dump
+      copy: src=./Templates/icingaweb2.sql dest=/root/icingaweb2.sql
+
+    - name: Load icingaweb2 database
+      mysql_db: name=icingaweb2 state=import target=/root/icingaweb2.sql login_user=root login_password=sagar
+
+    - name: Create a new database with name 'icinga'
+      mysql_db: name=icinga state=present login_user=root login_password=sagar
+
+    - name: Create icinga DB and User
+      mysql_user: login_user=root
+       login_password=sagar
+       name=icinga
+       password=icinga
+       priv=*.*:ALL
+       host=localhost
+       state=present
+
+    - name: Copy Icinga Featue MySQL file
+      copy: src=./Templates/icingaweb2 dest=/etc/
+
+    - name: Make icingaweb2 Folder/files tree writable
+      file: path="/etc/icingaweb2" mode=0775 recurse=yes
+
+    - name: Create Monitorig directory
+      file: path="/etc/icingaweb2/enabledModules" state=directory mode=0775
+
+    - name: Create symbolic link for monitoring module
+      shell: ln -s /usr/share/icingaweb2/modules/monitoring /etc/icingaweb2/enabledModules/monitoring
+
+    - name: Show token for setup
+      shell: chgrp -R icingaweb2 /etc/icingaweb2
+
+    - name: Show token for setup
+      shell: htpasswd -b -c /etc/httpd/conf/.htpasswd sagar bangera
+
+    - name: Copy httpd auth conf file
+      copy: src=./Templates/auth_basic.conf dest=/etc/httpd/conf.d/
+
+    - name: Restarting HTTPD service
+      service: name=httpd state=restarted

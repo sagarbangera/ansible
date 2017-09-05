@@ -1,0 +1,77 @@
+---
+- hosts: icinga_servers
+  vars:
+    base_dir: "{{ BASE_DIR|default('/root') }}"
+
+  tasks:
+
+    - name: Downloading EPEL Repo RPM files
+      get_url: url=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm dest={{ base_dir }}/epel-repo.rpm
+
+    - name: Install EPEL Repo packages
+      yum: name={{ base_dir }}/epel-repo.rpm state=present
+
+    - name: Install necessary packages from yum Repo
+      yum: name={{ item }} state=latest update_cache=no
+      with_items:
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+        - docker-ce
+        - php
+        - python-pip
+        - git
+
+    - name: Starting docker service
+      service: name=docker state=started enabled=yes
+
+    - pause: seconds=36
+
+    - name: Install boto python lib to connect to AWS S3
+      pip: name=boto
+
+    - name: Install awscli python lib to connect to AWS S3
+      pip: name=awscli
+
+    - name: UniInstall docker
+      pip: name=docker state=absent
+
+    - name: UniInstall docker-py
+      pip: name=docker-py state=absent
+
+    - name: UniInstall docker-compose
+      pip: name=docker-compose state=absent
+
+    - name: Install docker-compose
+      pip: name=docker-compose version=1.9.0
+
+#    - name: Clonning GIT repo - enable only if are running on remote node
+#      git: repo=https://github.com/sagarbangera/ansible.git dest={{ base_dir }}/ansible/
+
+    - name: Make my Folder tree readable
+      file:
+       path: "{{ base_dir }}/ansible/"
+       mode: 0755
+       recurse: yes
+
+    - name: Building Check MySQL Docker Image
+      docker_image: path="{{ base_dir }}/ansible/Docker/MySQL" name="mysql" state=present
+
+    - name: Starting MySQL Container
+      docker: image="mysql" name="sagar-mysql" ports=0.0.0.0:3305:3306 env="MYSQL_ROOT_PASSWORD=sagar" state=running
+
+    - name: Building HTTPD Docker Image
+      docker_image: path="{{ base_dir }}/ansible/Docker/HTTPD" name="httpd" state=present
+
+    - name: Starting HTTP Container
+      docker: image="httpd" name="sagar-httpd" ports=0.0.0.0:8080:80 state=started
+
+    - name: Copying scripts to root home dir
+      copy: src=../Scripts/{{ item }} dest=/root/ mode="a+x"
+      with_items:
+        - cron_job.sh
+        - copy_docker_files.sh
+        - make_backup.sh
+
+    - name: Creating Cron job to send files to AWS S3
+      cron: name="Job to copy log files to AWS S3." minute="0" hour="7" job="/root/cron_job.sh"
