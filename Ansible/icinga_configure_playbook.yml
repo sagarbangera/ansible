@@ -1,20 +1,10 @@
 ---
 - hosts: icinga_servers
   vars:
-    password: Jffhol&ffn#1lj350jH$.
     base_dir: "{{ BASE_DIR|default('/root') }}"
     icinga_conf: '/etc/icinga2/conf.d'
 
   tasks:
-    - name: Add user sagar in all hosts
-      user: name=sagar shell=/bin/bash comment="User" password={{password}}
-
-    - name: Adding user sagar to sudoers
-      lineinfile: dest=/etc/sudoers
-        backup=yes
-        line='sagar	ALL=(ALL)	ALL'
-        state=present
-
     - name: Downloading Icinga Repo RPM files
       get_url: url=https://packages.icinga.com/epel/icinga-rpm-release-7-latest.noarch.rpm dest={{ base_dir }}/icinga-repo.rpm
 
