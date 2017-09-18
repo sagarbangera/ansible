@@ -2,7 +2,6 @@
 - hosts: icinga_servers
   vars:
     base_dir: "{{ BASE_DIR|default('/root') }}"
-    icinga_conf: '/etc/icinga2/conf.d'
 
   tasks:
     - name: Downloading Icinga Repo RPM files
