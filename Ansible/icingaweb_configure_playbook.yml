@@ -3,7 +3,6 @@
   vars:
     password: Jffhol&ffn#1lj350jH$.
     base_dir: "{{ BASE_DIR|default('/root') }}"
-    icinga_conf: '/etc/icinga2/conf.d'
 
   tasks:
 
