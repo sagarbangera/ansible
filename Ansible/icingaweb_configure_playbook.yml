@@ -8,7 +8,7 @@
     - name: icinga api setup
       shell: icinga2 api setup
 
-    - name: Starting icinga2 service
+    - name: Restarting icinga2 service
       service: name=icinga2 state=restarted
 
     - name: Install necessary packages from yum Repo

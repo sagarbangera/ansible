@@ -11,6 +11,9 @@
     - name: Install EPEL Repo packages
       yum: name={{ base_dir }}/epel-repo.rpm state=present
 
+    - name: Download Docker-CE repo file to yum Repo
+      get_url: url=https://download.docker.com/linux/centos/docker-ce.repo dest=/etc/yum.repos.d/docker-ce.repo
+
     - name: Install necessary packages from yum Repo
       yum: name={{ item }} state=latest update_cache=no
       with_items:

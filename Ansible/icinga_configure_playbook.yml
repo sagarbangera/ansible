@@ -69,7 +69,7 @@
     - name: Enabling Icinga mysql Features
       icinga2_feature: name=ido-mysql state=present
 
-    - name: Starting icinga2 service
+    - name: Restarting icinga2 service
       service: name=icinga2 state=restarted
 
     - name: Edit timezone as required by icingaweb2 wizard
@@ -87,11 +87,11 @@
     - name: Copy Icinga Featue MySQL file
       copy: src=./Templates/ido-mysql.conf dest=/etc/icinga2/features-available/ido-mysql.conf
 
-    - name: Disable swap and enable MySql monitoring
+    - name: Disable swap and enable MySql/httpd monitoring
       copy: src=./Templates/services.conf dest=/etc/icinga2/conf.d/services.conf
 
-    - name: Disable swap and enable MySql monitoring
+    - name: Disable swap and enable MySql/httpd monitoring
       copy: src=./Templates/commands.conf dest=/etc/icinga2/conf.d/commands.conf
 
-    - name: Starting icinga2 service
+    - name: Restarting icinga2 service
       service: name=icinga2 state=restarted
