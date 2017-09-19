@@ -93,5 +93,8 @@
     - name: Disable swap and enable MySql/httpd monitoring
       copy: src=./Templates/commands.conf dest=/etc/icinga2/conf.d/commands.conf
 
+    - name: Disable other Disk monitoring
+      copy: src=./Templates/hosts.conf dest=/etc/icinga2/conf.d/hosts.conf
+
     - name: Restarting icinga2 service
       service: name=icinga2 state=restarted
